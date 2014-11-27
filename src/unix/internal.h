@@ -68,6 +68,7 @@
 
 #if defined(__linux__)
 # define UV__POLLIN   UV__EPOLLIN
+# define UV__POLLPRI  UV__EPOLLPRI
 # define UV__POLLOUT  UV__EPOLLOUT
 # define UV__POLLERR  UV__EPOLLERR
 # define UV__POLLHUP  UV__EPOLLHUP

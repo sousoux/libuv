@@ -1088,7 +1088,8 @@ struct uv_poll_s {
 
 enum uv_poll_event {
   UV_READABLE = 1,
-  UV_WRITABLE = 2
+  UV_WRITABLE = 2,
+  UV_INTERRUPT = 4
 };
 
 /* Initialize the poll watcher using a file descriptor. */

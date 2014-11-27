@@ -37,6 +37,7 @@
 #include <arpa/inet.h>
 #include <limits.h> /* INT_MAX, PATH_MAX */
 #include <sys/uio.h> /* writev */
+#include <execinfo.h>
 
 #ifdef __linux__
 # include <sys/ioctl.h>
@@ -86,6 +87,12 @@ void uv_close(uv_handle_t* handle, uv_close_cb close_cb) {
   handle->flags |= UV_CLOSING;
   handle->close_cb = close_cb;
 
+/*  fprintf(stderr, "uv_close - handle type %d addr %#x\n", handle->type, (void *)handle);
+
+  void *buffer[100];
+  int nptrs = backtrace(buffer, 100);  
+  backtrace_symbols_fd(buffer, nptrs, STDOUT_FILENO);
+*/
   switch (handle->type) {
   case UV_NAMED_PIPE:
     uv__pipe_close((uv_pipe_t*)handle);
@@ -156,6 +163,7 @@ void uv_close(uv_handle_t* handle, uv_close_cb close_cb) {
 void uv__make_close_pending(uv_handle_t* handle) {
   assert(handle->flags & UV_CLOSING);
   assert(!(handle->flags & UV_CLOSED));
+/*  fprintf(stderr, "uv__make_close_pending - handle %#x\n", (size_t)handle); */
   handle->next_closing = handle->loop->closing_handles;
   handle->loop->closing_handles = handle;
 }
@@ -171,7 +179,8 @@ static void uv__finish_close(uv_handle_t* handle) {
   assert(handle->flags & UV_CLOSING);
   assert(!(handle->flags & UV_CLOSED));
   handle->flags |= UV_CLOSED;
-
+/*  fprintf(stderr, "uv__finish_close - closing handle type %d addr %#x\n", handle->type, (void *)handle);
+*/
   switch (handle->type) {
     case UV_PREPARE:
     case UV_CHECK:
@@ -201,7 +210,8 @@ static void uv__finish_close(uv_handle_t* handle) {
   }
 
   uv__handle_unref(handle);
-  ngx_queue_remove(&handle->handle_queue);
+/*  fprintf(stderr, "uv__finish_close (before remove) - addr %#x qprev %#x qnext %#x\n", (size_t)handle, (size_t)handle->handle_queue.prev, (size_t)handle->handle_queue.next); */
+  ngx_queue_remove(&(handle->handle_queue));
 
   if (handle->close_cb) {
     handle->close_cb(handle);
@@ -646,7 +656,7 @@ void uv__io_init(uv__io_t* w, uv__io_cb cb, int fd) {
 
 
 void uv__io_start(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
-  assert(0 == (events & ~(UV__POLLIN | UV__POLLOUT)));
+  assert(0 == (events & ~(UV__POLLIN | UV__POLLOUT | UV__POLLPRI)));
   assert(0 != events);
   assert(w->fd >= 0);
   assert(w->fd < INT_MAX);
@@ -679,7 +689,7 @@ void uv__io_start(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
 
 
 void uv__io_stop(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
-  assert(0 == (events & ~(UV__POLLIN | UV__POLLOUT)));
+  assert(0 == (events & ~(UV__POLLIN | UV__POLLOUT | UV__POLLPRI)));
   assert(0 != events);
 
   if (w->fd == -1)
@@ -711,7 +721,7 @@ void uv__io_stop(uv_loop_t* loop, uv__io_t* w, unsigned int events) {
 
 
 void uv__io_close(uv_loop_t* loop, uv__io_t* w) {
-  uv__io_stop(loop, w, UV__POLLIN | UV__POLLOUT);
+  uv__io_stop(loop, w, UV__POLLIN | UV__POLLOUT | UV__POLLPRI);
   ngx_queue_remove(&w->pending_queue);
 
   /* Remove stale events for this file descriptor */
@@ -726,7 +736,7 @@ void uv__io_feed(uv_loop_t* loop, uv__io_t* w) {
 
 
 int uv__io_active(const uv__io_t* w, unsigned int events) {
-  assert(0 == (events & ~(UV__POLLIN | UV__POLLOUT)));
+  assert(0 == (events & ~(UV__POLLIN | UV__POLLOUT | UV__POLLPRI)));
   assert(0 != events);
   return 0 != (w->pevents & events);
 }

@@ -68,6 +68,7 @@
 #define UV__EPOLL_CTL_MOD     3
 
 #define UV__EPOLLIN           1
+#define UV__EPOLLPRI          2
 #define UV__EPOLLOUT          4
 #define UV__EPOLLERR          8
 #define UV__EPOLLHUP          16
